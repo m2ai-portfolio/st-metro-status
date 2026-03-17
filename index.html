@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ST Metro | System Status</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #252530;
+      --text: #e0e0e8;
+      --text-dim: #888899;
+      --accent: #6366f1;
+      --accent-dim: #4f46e520;
+      --green: #22c55e;
+      --green-dim: #22c55e18;
+      --amber: #f59e0b;
+      --amber-dim: #f59e0b18;
+      --red: #ef4444;
+      --red-dim: #ef444418;
+      --blue: #3b82f6;
+      --blue-dim: #3b82f618;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .logo h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo .subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .timestamp {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-align: right;
+    }
+
+    .timestamp .live {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    /* Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .full-width { grid-column: 1 / -1; }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+    }
+
+    /* Stats */
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .stat-small {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    /* Gate status */
+    .gate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .gate {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .gate-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .gate-dot.ok { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .gate-dot.halted { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+    .gate-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .gate-status {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Pipeline */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding: 12px 0;
+    }
+
+    .pipeline-node {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .pipeline-node.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .pipeline-node .node-name {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .pipeline-node .node-stat {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .pipeline-arrow {
+      color: var(--text-dim);
+      font-size: 18px;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-green { background: var(--green-dim); color: var(--green); }
+    .badge-amber { background: var(--amber-dim); color: var(--amber); }
+    .badge-blue { background: var(--blue-dim); color: var(--blue); }
+    .badge-red { background: var(--red-dim); color: var(--red); }
+
+    .score {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .type-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    /* Architecture */
+    .arch-flow {
+      font-size: 13px;
+      line-height: 2;
+      color: var(--text-dim);
+      padding: 16px;
+      background: var(--surface2);
+      border-radius: 8px;
+      white-space: pre-line;
+    }
+
+    .arch-flow .component {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .arch-flow .arrow {
+      color: var(--accent);
+    }
+
+    /* Section headers */
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      margin-top: 8px;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 768px) {
+      .grid, .grid-3, .gate-grid { grid-template-columns: 1fr; }
+      .pipeline { flex-direction: column; align-items: stretch; }
+      .pipeline-arrow { transform: rotate(90deg); text-align: center; }
+      header { flex-direction: column; gap: 12px; }
+      .timestamp { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="logo">
+        <div class="logo-icon">M</div>
+        <div>
+          <h1>ST Metro</h1>
+          <div class="subtitle">Level 5 Autonomous Software Production</div>
+        </div>
+      </div>
+      <div class="timestamp">
+        <div class="live">● ONLINE</div>
+        <div>Updated: March 17, 2026 10:45 CST</div>
+        <div>31,628 cycles completed</div>
+      </div>
+    </header>
+
+    <!-- Gate Status -->
+    <div class="card full-width" style="margin-bottom: 28px;">
+      <div class="card-header">
+        <span class="card-title">Gate Status</span>
+      </div>
+      <div class="gate-grid">
+        <div class="gate">
+          <div class="gate-dot ok"></div>
+          <div>
+            <div class="gate-name">Triage</div>
+            <div class="gate-status">0 consecutive failures</div>
+          </div>
+        </div>
+        <div class="gate">
+          <div class="gate-dot ok"></div>
+          <div>
+            <div class="gate-name">Build</div>
+            <div class="gate-status">0 consecutive failures</div>
+          </div>
+        </div>
+        <div class="gate">
+          <div class="gate-dot ok"></div>
+          <div>
+            <div class="gate-name">Patch</div>
+            <div class="gate-status">0 consecutive failures</div>
+          </div>
+        </div>
+        <div class="gate">
+          <div class="gate-dot ok"></div>
+          <div>
+            <div class="gate-name">Publish</div>
+            <div class="gate-status">0 consecutive failures</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Flow -->
+    <div class="section-title">Pipeline Flow</div>
+    <div class="card full-width" style="margin-bottom: 28px;">
+      <div class="pipeline">
+        <div class="pipeline-node">
+          <div class="node-name">Signals</div>
+          <div class="node-stat">104</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-node">
+          <div class="node-name">IdeaForge</div>
+          <div class="node-stat">104</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-node active">
+          <div class="node-name">Triage</div>
+          <div class="node-stat">179</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-node">
+          <div class="node-name">Approved</div>
+          <div class="node-stat">165</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-node">
+          <div class="node-name">Built</div>
+          <div class="node-stat">36</div>
+        </div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-node">
+          <div class="node-name">Published</div>
+          <div class="node-stat">11</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Triage Decisions</span></div>
+        <div class="stat-row">
+          <span class="stat-value" style="color: var(--green);">165</span>
+          <span class="stat-label">approved</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-small" style="color: var(--amber);">6</span>
+          <span class="stat-label">deferred</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-small" style="color: var(--red);">8</span>
+          <span class="stat-label">rejected</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">IdeaForge</span></div>
+        <div class="stat-row">
+          <span class="stat-value">104</span>
+          <span class="stat-label">total ideas</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-small">16</span>
+          <span class="stat-label">classified</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-small" style="color: var(--text-dim);">85</span>
+          <span class="stat-label">dismissed</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Build Pipeline</span></div>
+        <div class="stat-row">
+          <span class="stat-value" style="color: var(--green);">36</span>
+          <span class="stat-label">completed</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-small" style="color: var(--blue);">765</span>
+          <span class="stat-label">queued</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-small">3,412</span>
+          <span class="stat-label">patches skipped</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Priority Queue -->
+    <div class="section-title">Priority Queue</div>
+    <div class="card" style="margin-bottom: 28px;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Title</th>
+              <th>Score</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="type-tag">academy</span></td>
+              <td>Code Reviewer - Agent Build</td>
+              <td class="score">180.0</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">skylynx</span></td>
+              <td>Session Tracking Investigation</td>
+              <td class="score">127.5</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">skylynx</span></td>
+              <td>Offline Workflow Documentation</td>
+              <td class="score">127.5</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">skylynx</span></td>
+              <td>Success Pattern Reinforcement</td>
+              <td class="score">127.5</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">skylynx</span></td>
+              <td>Quality Score Analysis Enhancement</td>
+              <td class="score">127.5</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">ideaforge</span></td>
+              <td>AI Agent Testing Platform</td>
+              <td class="score">76.0</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">ideaforge</span></td>
+              <td>E2E Pipeline Validator</td>
+              <td class="score">75.0</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">ideaforge</span></td>
+              <td>MCP-Based Observability Layer</td>
+              <td class="score">71.0</td>
+              <td><span class="badge badge-blue">dispatched</span></td>
+            </tr>
+            <tr>
+              <td><span class="type-tag">ideaforge</span></td>
+              <td>Agent Control Plane for Client-Safe Deployment</td>
+              <td class="score">71.0</td>
+              <td><span class="badge badge-amber">pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Completed Builds -->
+    <div class="section-title">Recent Completed Builds</div>
+    <div class="card" style="margin-bottom: 28px;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>E2E Pipeline Validator</td>
+              <td>Mar 11, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>AI Agent Testing Platform</td>
+              <td>Mar 8, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>Code Reviewer (Tier 1 Agent)</td>
+              <td>Mar 6, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>VoiceAgent QA Platform</td>
+              <td>Mar 4, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>AgentGuard</td>
+              <td>Mar 4, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>Token-Efficient Search API</td>
+              <td>Mar 1, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>AI Agent Analytics Platform</td>
+              <td>Mar 1, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>AI Circuit Breaker</td>
+              <td>Mar 1, 2026</td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Top Ideas -->
+    <div class="section-title">Top Scored Ideas (IdeaForge)</div>
+    <div class="card" style="margin-bottom: 28px;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Score</th>
+              <th>Type</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>#61</td>
+              <td>AI Agent Testing Platform</td>
+              <td class="score">7.60</td>
+              <td><span class="type-tag">product</span></td>
+              <td><span class="badge badge-green">completed</span></td>
+            </tr>
+            <tr>
+              <td>#79</td>
+              <td>E2E Pipeline Validator</td>
+              <td class="score">7.50</td>
+              <td><span class="type-tag">cli_tool</span></td>
+              <td><span class="badge badge-green">exported</span></td>
+            </tr>
+            <tr>
+              <td>#2</td>
+              <td>Agent Supply Chain Scanner</td>
+              <td class="score">7.40</td>
+              <td><span class="type-tag">tool</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+            <tr>
+              <td>#43</td>
+              <td>AgentGuard</td>
+              <td class="score">7.35</td>
+              <td><span class="type-tag">product</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+            <tr>
+              <td>#5</td>
+              <td>AI Agent Analytics Platform</td>
+              <td class="score">7.35</td>
+              <td><span class="type-tag">product</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+            <tr>
+              <td>#102</td>
+              <td>Agent Control Plane</td>
+              <td class="score">7.10</td>
+              <td><span class="type-tag">product</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+            <tr>
+              <td>#100</td>
+              <td>MCP Observability Layer</td>
+              <td class="score">7.10</td>
+              <td><span class="type-tag">tool</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+            <tr>
+              <td>#13</td>
+              <td>AI Circuit Breaker</td>
+              <td class="score">6.95</td>
+              <td><span class="type-tag">product</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+            <tr>
+              <td>#12</td>
+              <td>ConvoMetrics</td>
+              <td class="score">6.95</td>
+              <td><span class="type-tag">product</span></td>
+              <td><span class="badge badge-blue">classified</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Architecture -->
+    <div class="section-title">Architecture</div>
+    <div class="card" style="margin-bottom: 28px;">
+      <div class="arch-flow"><span class="component">Research Agents</span> (ArXiv, GitHub, HN, idea_surfacer)
+  <span class="arrow">→</span> <span class="component">IdeaForge</span> (score + classify)
+  <span class="arrow">→</span> <span class="component">Metroplex</span> Gate 1: Triage (approve/reject/defer)
+  <span class="arrow">→</span> Priority Queue (weighted by source)
+  <span class="arrow">→</span> <span class="component">Metroplex</span> Gate 2: Spec Gen + Build
+        LLM Expander <span class="arrow">→</span> Tyrest Pre-Build Review <span class="arrow">→</span> YCE Harness
+  <span class="arrow">→</span> <span class="component">Metroplex</span> Gate 3: Patch (ST Factory persona updates)
+  <span class="arrow">→</span> <span class="component">Metroplex</span> Gate 4: Publish
+
+<span class="component">Sky-Lynx</span> (weekly) <span class="arrow">→</span> Priority Queue (self-improvement tasks)
+<span class="component">Academy</span> (promotions) <span class="arrow">→</span> Priority Queue (agent builds)
+<span class="component">Linear</span> (backlog) <span class="arrow">→</span> Priority Queue (strategic direction)</div>
+    </div>
+
+    <!-- Component Status -->
+    <div class="section-title">Component Status</div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Metroplex</span></div>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;">
+          <div>Status: <span style="color: var(--green); font-weight: 600;">Running</span> (continuous, PID active)</div>
+          <div>Tests: 229+ passing</div>
+          <div>Phases: 1-9.5 complete, Phase 13 complete</div>
+          <div>Cycle sleep: 60s</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">IdeaForge</span></div>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;">
+          <div>Status: <span style="color: var(--green); font-weight: 600;">Active</span></div>
+          <div>Total ideas: 104</div>
+          <div>Classified: 16 | Dismissed: 85</div>
+          <div>Exported: 1 | Scored: 1</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Research Agents</span></div>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;">
+          <div>Status: <span style="color: var(--green); font-weight: 600;">Active</span> (daily cron)</div>
+          <div>Agents: arxiv_scanner, tool_monitor, domain_watcher, idea_surfacer</div>
+          <div>AutoResearch: batch testing in progress</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">YCE Harness</span></div>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;">
+          <div>Status: <span style="color: var(--green); font-weight: 600;">Ready</span></div>
+          <div>Mode: Multi-agent (Haiku orchestrator + Sonnet specialists)</div>
+          <div>Parallel: git worktree isolation</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Sky-Lynx</span></div>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;">
+          <div>Status: <span style="color: var(--green); font-weight: 600;">Active</span> (weekly cron)</div>
+          <div>Analyzes: usage facets + IdeaForge + ST Factory</div>
+          <div>Output: CLAUDE.md recommendations</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">ClaudeClaw "Data"</span></div>
+        <div style="font-size: 13px; color: var(--text-dim); line-height: 1.8;">
+          <div>Status: <span style="color: var(--green); font-weight: 600;">Running</span> (PM2)</div>
+          <div>Role: Chief of Staff / Telegram interface</div>
+          <div>Multi-agent: Starscream, Ravage routing</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>ST Metro | M2AI</div>
+      <div>Snapshot generated March 17, 2026</div>
+    </footer>
+  </div>
+</body>
+</html>
